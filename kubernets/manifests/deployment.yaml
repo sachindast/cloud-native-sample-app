@@ -16,7 +16,7 @@ spec:
         app: sample-node-app
     spec:
       containers:
-      - image: sample-node-app:v1
+      - image: sample-node-app:v2
         imagePullPolicy: Never
         name: sample-node-app
         resources: {}
