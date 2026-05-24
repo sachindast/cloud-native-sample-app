@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-node-app
+  name: sample-node-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-node-app
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: sample-node-app
+    spec:
+      containers:
+      - image: sample-node-app:v1
+        imagePullPolicy: Never
+        name: sample-node-app
+        resources: {}
+        ports:
+        - containerPort: 3000
+        env:
+        - name: APP_ENV
+          value: "kubernetes"
+        - name: APP_VERSION
+          value: "2.0.0"
+status: {}
