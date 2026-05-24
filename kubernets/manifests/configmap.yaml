@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: sample-node-config
+
+data:
+  APP_ENV: "kubernetes"
+  APP_VERSION: "3.0.0"
+  APP_MESSAGE: "Running from ConfigMap"

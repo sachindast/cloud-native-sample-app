@@ -26,3 +26,12 @@ app.get('/version', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Application running on port ${PORT}`);
 });
+
+app.get('/config', (req, res) => {
+    res.json({
+        environment: process.env.APP_ENV,
+        version: process.env.APP_VERSION,
+        message: process.env.APP_MESSAGE,
+        secretConfigured: process.env.APP_SECRET ? true : false
+    });
+});
