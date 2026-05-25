@@ -6,6 +6,7 @@ pool:
 
 steps:
   - script: |
+      set -x
       echo "Pipeline Started"
 
       echo "Checking Node.js Version"
@@ -16,6 +17,7 @@ steps:
     displayName: "Validate Node.js Environment"
 
   - script: |
+      set -x
       cd app
 
       echo "Current Directory:"
