@@ -1,10 +1,16 @@
 trigger:
-  - main
+  - none
 
 pool:
   name: Default
 
 steps:
+   - script: |
+      set -x
+      chmod +x infrastructure/bootstrap.sh
+      ./infrastructure/bootstrap.sh
+     displayName: "Bootstrap Kubernetes Environment"
+
   - script: |
       set -x
       echo "Checking Node.js"
