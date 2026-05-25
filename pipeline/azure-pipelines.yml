@@ -6,26 +6,33 @@ pool:
 
 steps:
   - script: |
-      set -x
-      echo "Pipeline Started"
-
-      echo "Checking Node.js Version"
+      echo "Checking Node.js"
       node -v
 
-      echo "Checking npm Version"
+      echo "Checking npm"
       npm -v
     displayName: "Validate Node.js Environment"
 
   - script: |
-      set -x
       cd app
-
-      echo "Current Directory:"
-      pwd
-
-      echo "Listing Application Files"
-      ls -l
 
       echo "Installing Dependencies"
       npm install
     displayName: "Install Node.js Dependencies"
+
+  - script: |
+      echo "Checking Docker"
+      docker --version
+    displayName: "Validate Docker Environment"
+
+  - script: |
+      echo "Building Docker Image"
+
+      docker build \
+        -t sample-node-app:v1 \
+        -f Dockerfile .
+    displayName: "Build Docker Image"
+
+  - script: |
+      docker images
+    displayName: "Verify Docker Image"
