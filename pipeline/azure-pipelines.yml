@@ -6,6 +6,7 @@ pool:
 
 steps:
   - script: |
+      set -x
       echo "Checking Node.js"
       node -v
 
@@ -14,6 +15,7 @@ steps:
     displayName: "Validate Node.js Environment"
 
   - script: |
+      set -x
       cd app
 
       echo "Installing Dependencies"
@@ -21,11 +23,13 @@ steps:
     displayName: "Install Node.js Dependencies"
 
   - script: |
+      set -x
       echo "Checking Docker"
       docker --version
     displayName: "Validate Docker Environment"
 
   - script: |
+      set -x   
       echo "Building Docker Image"
 
       docker build \
@@ -34,5 +38,6 @@ steps:
     displayName: "Build Docker Image"
 
   - script: |
+      set -x
       docker images
     displayName: "Verify Docker Image"
