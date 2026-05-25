@@ -6,8 +6,24 @@ pool:
 
 steps:
   - script: |
-      echo "Hello from Azure DevOps Pipeline"
-      echo "Pipeline execution successful"
-      hostname
+      echo "Pipeline Started"
+
+      echo "Checking Node.js Version"
+      node -v
+
+      echo "Checking npm Version"
+      npm -v
+    displayName: "Validate Node.js Environment"
+
+  - script: |
+      cd app
+
+      echo "Current Directory:"
       pwd
-    displayName: "Basic Pipeline Validation"
+
+      echo "Listing Application Files"
+      ls -l
+
+      echo "Installing Dependencies"
+      npm install
+    displayName: "Install Node.js Dependencies"
