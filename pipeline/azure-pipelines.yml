@@ -1,0 +1,13 @@
+trigger:
+  - main
+
+pool:
+  name: Default
+
+steps:
+  - script: |
+      echo "Hello from Azure DevOps Pipeline"
+      echo "Pipeline execution successful"
+      hostname
+      pwd
+    displayName: "Basic Pipeline Validation"
