@@ -52,6 +52,23 @@ steps:
 
       docker push localhost:5000/sample-node-app:v1
     displayName: "Push Docker Image"
+  
+  - script: |
+      set -x
+      echo "Loading Image Into kind Cluster"
+
+      kind load docker-image localhost:5000/sample-node-app:v1 --name devops-platform
+
+      echo "Deploying To Kubernetes"
+
+      kubectl apply -f kubernets/manifests/
+
+      echo "Checking Kubernetes Resources"
+
+      kubectl get pods
+      kubectl get svc
+      kubectl get ingress
+    displayName: "Deploy To Kubernetes"
 
   - script: |
       set -x
