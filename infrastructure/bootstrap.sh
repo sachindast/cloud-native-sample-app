@@ -10,6 +10,8 @@ echo "Installing ingress controller"
 
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
+sleep 30
+
 echo "Waiting for ingress controller"
 
 kubectl wait --namespace ingress-nginx \
