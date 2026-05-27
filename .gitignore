@@ -22,6 +22,7 @@ Thumbs.db
 *.tfstate.*
 .terraform/
 terraform/.terraform.lock.hcl
+terraform-ecr/.terraform.lock.hcl
 
 # Kubernetes future files
 kubeconfig

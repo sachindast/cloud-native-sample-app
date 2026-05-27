@@ -1,0 +1,23 @@
+replicaCount: 1
+
+config:
+  appEnv: "dev"
+  appVersion: "3.0.0"
+
+secret:
+  APP_SECRET: "my-super-secret-key"
+
+image:
+  repository: 723696375420.dkr.ecr.ap-south-1.amazonaws.com/sample-node-app
+  tag: "v1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 80
+
+app:
+  port: 3000
+
+ingress:
+  enabled: false
