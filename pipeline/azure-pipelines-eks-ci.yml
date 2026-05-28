@@ -1,0 +1,65 @@
+trigger: none
+
+variables:
+  AWS_REGION: "ap-south-1"
+  ECR_REGISTRY: "723696375420.dkr.ecr.ap-south-1.amazonaws.com"
+  ECR_REPOSITORY: "sample-node-app"
+  IMAGE_TAG: "v1"
+  
+pool:
+  name: Default
+
+steps:
+  - script: |
+      set -x
+      echo "Checking Node.js"
+      node -v
+
+      echo "Checking npm"
+      npm -v
+    displayName: "Validate Node.js Environment"
+
+  - script: |
+      set -x
+      cd app
+
+      echo "Installing Dependencies"
+      npm install
+    displayName: "Install Node.js Dependencies"
+
+  - script: |
+      set -x
+      echo "Checking Docker"
+      docker --version
+    displayName: "Validate Docker Environment"
+
+  - script: |
+      set -x   
+      echo "Building Docker Image"
+      docker build -t sample-node-app:$(IMAGE_TAG) -f Dockerfile .
+    displayName: "Build Docker Image"
+
+  - script: |
+      set -x
+      echo "Tagging Image For Amazon ECR"
+
+      docker tag sample-node-app:$(IMAGE_TAG) $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
+    displayName: "Tag Docker Image For ECR"
+
+  - script: |
+      set -x
+      aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ECR_REGISTRY)
+    displayName: "Login To Amazon ECR"
+    
+
+  - script: |
+      set -x
+      echo "Pushing Image To Local Registry"
+
+      docker push $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
+    displayName: "Push Docker Image to AWS ECR"
+
+  - script: |
+      set -x
+      docker images
+    displayName: "Verify Docker Image"
