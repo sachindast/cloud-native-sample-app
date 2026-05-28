@@ -25,7 +25,7 @@ steps:
 
       cd helm/sample-node-app
 
-      helm upgrade --install sample-node-app .
+      helm upgrade --install sample-node-app .  --wait --timeout 5m
 
     displayName: "Deploy Application Using Helm"
 
