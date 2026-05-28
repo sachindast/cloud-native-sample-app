@@ -3,79 +3,37 @@ trigger: none
 pool:
   name: Default
 
+variables:
+  AWS_REGION: "ap-south-1"
+  EKS_CLUSTER_NAME: "devops-platform"
+
 steps:
   - script: |
       set -x
-      chmod +x infrastructure/bootstrap.sh
-      ./infrastructure/bootstrap.sh
-    displayName: "Bootstrap Kubernetes Environment"
-
-  - script: |
-      set -x
-      echo "Checking Node.js"
-      node -v
-
-      echo "Checking npm"
-      npm -v
-    displayName: "Validate Node.js Environment"
-
-  - script: |
-      set -x
-      cd app
-
-      echo "Installing Dependencies"
-      npm install
-    displayName: "Install Node.js Dependencies"
-
-  - script: |
-      set -x
-      echo "Checking Docker"
-      docker --version
-    displayName: "Validate Docker Environment"
-
-  - script: |
-      set -x   
-      echo "Building Docker Image"
-
-      docker build \
-        -t sample-node-app:v1 \
-        -f Dockerfile .
-    displayName: "Build Docker Image"
-
-  - script: |
-      set -x
-      echo "Tagging Image For Registry"
-
-      docker tag \
-        sample-node-app:v1 \
-        localhost:5000/sample-node-app:v1
-    displayName: "Tag Docker Image"
-
-  - script: |
-      set -x
-      echo "Pushing Image To Local Registry"
-
-      docker push localhost:5000/sample-node-app:v1
-    displayName: "Push Docker Image"
+      aws eks update-kubeconfig --region $(AWS_REGION) --name $(EKS_CLUSTER_NAME)
+    displayName: "Configure kubeconfig For EKS"
   
   - script: |
       set -x
-      echo "Loading Image Into kind Cluster"
 
-      kind load docker-image localhost:5000/sample-node-app:v1 --name devops-platform
+      kubectl get nodes
 
-      echo "Deploying To Kubernetes"
+    displayName: "Validate EKS Connectivity"
 
-      kubectl apply -f kubernets/manifests/
+  - script: |
+      set -x
 
-      echo "Checking Kubernetes Resources"
+      cd helm/sample-node-app
+
+      helm upgrade --install sample-node-app .
+
+    displayName: "Deploy Application Using Helm"
+
+  - script: |
+      set -x
 
       kubectl get pods
       kubectl get svc
       kubectl get ingress
-    displayName: "Deploy To Kubernetes"
 
-  - script: |
-      set -x
-      docker images
-    displayName: "Verify Docker Image"
+    displayName: "Validate Kubernetes Deployment"
