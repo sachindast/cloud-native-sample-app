@@ -32,6 +32,8 @@ steps:
   - script: |
       set -x
 
+      kubectl rollout status deployment/sample-node-app --timeout=300s
+
       kubectl get pods
       kubectl get svc
       kubectl get ingress
