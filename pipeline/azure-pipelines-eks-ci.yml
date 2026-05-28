@@ -54,7 +54,7 @@ steps:
 
   - script: |
       set -x
-      echo "Pushing Image To Local Registry"
+      echo "Pushing Image To AWS ECR Registry"
 
       docker push $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
     displayName: "Push Docker Image to AWS ECR"
