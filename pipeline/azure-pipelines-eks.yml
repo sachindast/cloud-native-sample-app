@@ -1,0 +1,134 @@
+trigger: none
+
+variables:
+  AWS_REGION: "ap-south-1"
+  ECR_REGISTRY: "723696375420.dkr.ecr.ap-south-1.amazonaws.com"
+  ECR_REPOSITORY: "sample-node-app"
+  EKS_CLUSTER_NAME: "devops-platform"
+  IMAGE_TAG: "$(Build.BuildId)"
+
+pool:
+  name: Default
+
+stages:
+
+- stage: Build
+  displayName: "Build and Push Docker Image"
+
+  jobs:
+    - job: BuildAndPush
+      displayName: "Build Docker Image and Push to ECR"
+
+      steps:
+
+        - script: |
+            set -x
+            echo "Checking Node.js"
+            node -v
+
+            echo "Checking npm"
+            npm -v
+          displayName: "Validate Node.js Environment"
+
+        - script: |
+            set -x
+            cd app
+
+            echo "Installing Dependencies"
+            npm install
+          displayName: "Install Node.js Dependencies"
+
+        - script: |
+            set -x
+            echo "Checking Docker"
+            docker --version
+          displayName: "Validate Docker Environment"
+
+        - script: |
+            set -x
+
+            echo "Building Docker Image"
+
+            docker build \
+              -t sample-node-app:$(IMAGE_TAG) \
+              -f Dockerfile .
+          displayName: "Build Docker Image"
+
+        - script: |
+            set -x
+
+            echo "Tagging Image For Amazon ECR"
+
+            docker tag \
+              sample-node-app:$(IMAGE_TAG) \
+              $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
+          displayName: "Tag Docker Image For ECR"
+
+        - script: |
+            set -x
+
+            aws ecr get-login-password \
+              --region $(AWS_REGION) | \
+              docker login \
+              --username AWS \
+              --password-stdin $(ECR_REGISTRY)
+          displayName: "Login To Amazon ECR"
+
+        - script: |
+            set -x
+
+            echo "Pushing Image To Amazon ECR"
+
+            docker push \
+              $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
+          displayName: "Push Docker Image To ECR"
+
+        - script: |
+            set -x
+            docker images
+          displayName: "Verify Docker Image"
+
+- stage: Deploy
+  displayName: "Deploy Application To EKS"
+  dependsOn: Build
+
+  jobs:
+    - job: DeployToEKS
+      displayName: "Deploy Application"
+
+      steps:
+
+        - script: |
+            set -x
+
+            aws eks update-kubeconfig \
+              --region $(AWS_REGION) \
+              --name $(EKS_CLUSTER_NAME)
+          displayName: "Configure kubeconfig For EKS"
+
+        - script: |
+            set -x
+
+            kubectl get nodes
+          displayName: "Validate EKS Connectivity"
+
+        - script: |
+            set -x
+
+            cd helm/sample-node-app
+
+            helm upgrade --install sample-node-app . \
+              --set image.tag=$(IMAGE_TAG) \
+              --wait \
+              --timeout 5m
+          displayName: "Deploy Application Using Helm"
+
+        - script: |
+            set -x
+
+            kubectl rollout status deployment/sample-node-app --timeout=300s
+
+            kubectl get pods
+            kubectl get svc
+            kubectl get ingress
+          displayName: "Validate Kubernetes Deployment"
