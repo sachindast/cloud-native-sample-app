@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -x
 
 set -euo pipefail
 
@@ -9,6 +8,13 @@ set -euo pipefail
 ###############################################
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+AWS_REGION="ap-south-1"
+CLUSTER_NAME="devops-platform"
+
+###############################################
+# Helper Functions
+###############################################
 
 print_header() {
     echo
@@ -29,93 +35,129 @@ print_success() {
     echo "✔ $1"
 }
 
-print_header
-
 ###############################################
 # Step 1 - Create Amazon ECR
 ###############################################
 
-print_step "[1/6] Creating Amazon ECR"
+create_ecr() {
 
-cd "$ROOT_DIR/terraform-ecr"
+    print_step "[1/6] Creating Amazon ECR"
 
-terraform init
-terraform apply -auto-approve
+    cd "$ROOT_DIR/terraform-ecr"
 
-print_success "Amazon ECR created"
+    terraform init
+    terraform apply -auto-approve
+
+    print_success "Amazon ECR is ready"
+}
 
 ###############################################
-# Step 2 - Create EKS Infrastructure
+# Step 2 - Create Amazon EKS
 ###############################################
 
-print_step "[2/6] Creating Amazon EKS Infrastructure"
+create_eks() {
 
-cd "$ROOT_DIR/terraform"
+    print_step "[2/6] Creating Amazon EKS Infrastructure"
 
-terraform init
-terraform apply -auto-approve
+    cd "$ROOT_DIR/terraform"
 
-print_success "Amazon EKS infrastructure created"
+    terraform init
+    terraform apply -auto-approve
+
+    print_success "Amazon EKS is ready"
+}
 
 ###############################################
 # Step 3 - Configure kubeconfig
 ###############################################
 
-print_step "[3/6] Configuring kubeconfig"
+configure_kubeconfig() {
 
-aws eks update-kubeconfig \
-    --region ap-south-1 \
-    --name devops-platform
+    print_step "[3/6] Configuring kubeconfig"
 
-print_success "kubeconfig updated"
+    aws eks update-kubeconfig \
+        --region "$AWS_REGION" \
+        --name "$CLUSTER_NAME"
 
-###############################################
-# Step 4 - Verify Kubernetes Connectivity
-###############################################
-
-print_step "[4/6] Verifying Kubernetes Cluster"
-
-kubectl cluster-info
-kubectl get nodes
-
-print_success "Cluster is reachable"
+    print_success "kubeconfig configured"
+}
 
 ###############################################
-# Step 5 - Install NGINX Ingress Controller
+# Step 4 - Verify Cluster
 ###############################################
 
-print_step "[5/6] Installing NGINX Ingress Controller"
+verify_cluster() {
 
-kubectl create namespace ingress-nginx \
-    --dry-run=client -o yaml | kubectl apply -f -
+    print_step "[4/6] Verifying Kubernetes Cluster"
 
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
-helm repo update
+    kubectl cluster-info
+    kubectl get nodes
 
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-    --namespace ingress-nginx
-
-print_success "NGINX Ingress installed"
+    print_success "Cluster connectivity verified"
+}
 
 ###############################################
-# Step 6 - Wait for Ingress Controller
+# Step 5 - Install NGINX Ingress
 ###############################################
 
-print_step "[6/6] Waiting for Ingress Controller"
+install_ingress() {
 
-kubectl rollout status deployment/ingress-nginx-controller \
-    -n ingress-nginx \
-    --timeout=10m
+    print_step "[5/6] Installing NGINX Ingress Controller"
 
-print_success "Ingress Controller is Ready"
+    kubectl create namespace ingress-nginx \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
+
+    helm repo update
+
+    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+        --namespace ingress-nginx
+
+    print_success "NGINX Ingress installed"
+}
 
 ###############################################
-# Bootstrap Complete
+# Step 6 - Wait for Ingress
 ###############################################
+
+wait_for_ingress() {
+
+    print_step "[6/6] Waiting for Ingress Controller"
+
+    kubectl rollout status deployment/ingress-nginx-controller \
+        -n ingress-nginx \
+        --timeout=10m
+
+    echo
+    echo "Waiting for AWS LoadBalancer..."
+
+    kubectl get svc -n ingress-nginx
+
+    print_success "Ingress Controller is Ready"
+}
+
+###############################################
+# Main
+###############################################
+
+print_header
+
+create_ecr
+
+create_eks
+
+configure_kubeconfig
+
+verify_cluster
+
+install_ingress
+
+wait_for_ingress
 
 echo
 echo "======================================================="
-echo "        Platform Bootstrap Completed Successfully"
+echo " Platform Bootstrap Completed Successfully"
 echo "======================================================="
 echo
 echo "Platform Status"
