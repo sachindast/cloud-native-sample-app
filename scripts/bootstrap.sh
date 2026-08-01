@@ -24,6 +24,44 @@ print_header() {
     echo
 }
 
+check_prerequisites() {
+
+    print_step "[Prerequisite] Checking required tools"
+
+    local tools=("terraform" "kubectl" "helm" "aws")
+
+    for tool in "${tools[@]}"; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            echo "✖ Error: '$tool' is not installed."
+            exit 1
+        fi
+    done
+
+    print_success "Required tools are installed"
+}
+
+check_aws_login() {
+
+    print_step "[Prerequisite] Checking AWS Authentication"
+
+    aws sts get-caller-identity >/dev/null
+
+    print_success "AWS authentication verified"
+}
+
+setup_helm_repo() {
+
+    print_step "[Prerequisite] Checking Helm Repository"
+
+    if ! helm repo list | grep -q ingress-nginx; then
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    fi
+
+    helm repo update
+
+    print_success "Helm repository ready"
+}
+
 print_step() {
     echo
     echo "-------------------------------------------------------"
@@ -142,6 +180,12 @@ wait_for_ingress() {
 ###############################################
 
 print_header
+
+check_prerequisites
+
+check_aws_login
+
+setup_helm_repo
 
 create_ecr
 
