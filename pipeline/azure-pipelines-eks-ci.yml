@@ -4,7 +4,7 @@ variables:
   AWS_REGION: "ap-south-1"
   ECR_REGISTRY: "723696375420.dkr.ecr.ap-south-1.amazonaws.com"
   ECR_REPOSITORY: "sample-node-app"
-  IMAGE_TAG: "v1"
+  IMAGE_TAG: "$(Build.BuildId)"
   
 pool:
   name: Default
@@ -58,6 +58,14 @@ steps:
 
       docker push $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
     displayName: "Push Docker Image to AWS ECR"
+
+  - script: |
+      set -x
+      echo "Updating Helm values.yaml"
+      sed -i 's/tag: ".*/tag: "$(IMAGE_TAG)"/' helm/sample-node-app/values.yaml
+      echo "Updated values.yaml"
+      cat helm/sample-node-app/values.yaml
+    displayName: "Update Helm values.yaml"
 
   - script: |
       set -x
