@@ -9,7 +9,7 @@ secret:
 
 image:
   repository: 723696375420.dkr.ecr.ap-south-1.amazonaws.com/sample-node-app
-  tag: "v1"
+  tag: "35"
   pullPolicy: IfNotPresent
 
 service:
