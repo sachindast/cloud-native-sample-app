@@ -51,15 +51,19 @@ check_aws_login() {
 
 setup_helm_repo() {
 
-    print_step "[Prerequisite] Checking Helm Repository"
+    print_step "[Prerequisite] Checking Helm Repositories"
 
-    if ! helm repo list | grep -q ingress-nginx; then
+    if ! helm repo list | grep -q "^ingress-nginx"; then
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    fi
+
+    if ! helm repo list | grep -q "^argo"; then
+        helm repo add argo https://argoproj.github.io/argo-helm
     fi
 
     helm repo update
 
-    print_success "Helm repository ready"
+    print_success "Helm repositories are ready"
 }
 
 print_step() {
@@ -79,7 +83,7 @@ print_success() {
 
 create_ecr() {
 
-    print_step "[1/6] Creating Amazon ECR"
+    print_step "[1/8] Creating Amazon ECR"
 
     cd "$ROOT_DIR/terraform-ecr"
 
@@ -95,7 +99,7 @@ create_ecr() {
 
 create_eks() {
 
-    print_step "[2/6] Creating Amazon EKS Infrastructure"
+    print_step "[2/8] Creating Amazon EKS Infrastructure"
 
     cd "$ROOT_DIR/terraform"
 
@@ -111,7 +115,7 @@ create_eks() {
 
 configure_kubeconfig() {
 
-    print_step "[3/6] Configuring kubeconfig"
+    print_step "[3/8] Configuring kubeconfig"
 
     aws eks update-kubeconfig \
         --region "$AWS_REGION" \
@@ -126,7 +130,7 @@ configure_kubeconfig() {
 
 verify_cluster() {
 
-    print_step "[4/6] Verifying Kubernetes Cluster"
+    print_step "[4/8] Verifying Kubernetes Cluster"
 
     kubectl cluster-info
     kubectl get nodes
@@ -140,14 +144,10 @@ verify_cluster() {
 
 install_ingress() {
 
-    print_step "[5/6] Installing NGINX Ingress Controller"
+    print_step "[5/8] Installing NGINX Ingress Controller"
 
     kubectl create namespace ingress-nginx \
         --dry-run=client -o yaml | kubectl apply -f -
-
-    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
-
-    helm repo update
 
     helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
         --namespace ingress-nginx
@@ -176,6 +176,58 @@ wait_for_ingress() {
 }
 
 ###############################################
+# Step 7 - Install Argo CD
+###############################################
+
+install_argocd() {
+
+    print_step "[7/8] Installing Argo CD"
+
+    kubectl create namespace argocd \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    helm upgrade --install argocd argo/argo-cd \
+        --namespace argocd
+
+    print_success "Argo CD installed"
+}
+
+###############################################
+# Step 8 - Wait for Argo CD
+###############################################
+
+wait_for_argocd() {
+
+    print_step "[8/8] Waiting for Argo CD"
+
+    kubectl rollout status deployment/argocd-server \
+        -n argocd \
+        --timeout=10m
+
+    kubectl rollout status deployment/argocd-repo-server \
+        -n argocd \
+        --timeout=10m
+
+    kubectl rollout status deployment/argocd-dex-server \
+        -n argocd \
+        --timeout=10m
+
+    kubectl rollout status deployment/argocd-applicationset-controller \
+        -n argocd \
+        --timeout=10m
+
+    kubectl rollout status deployment/argocd-notifications-controller \
+        -n argocd \
+        --timeout=10m
+
+    kubectl rollout status statefulset/argocd-application-controller \
+        -n argocd \
+        --timeout=10m
+
+    print_success "Argo CD is Ready"
+}
+
+###############################################
 # Main
 ###############################################
 
@@ -199,6 +251,10 @@ install_ingress
 
 wait_for_ingress
 
+install_argocd
+
+wait_for_argocd
+
 echo
 echo "======================================================="
 echo " Platform Bootstrap Completed Successfully"
@@ -212,6 +268,8 @@ echo "✔ kubeconfig configured"
 echo "✔ Kubernetes cluster reachable"
 echo "✔ NGINX Ingress installed"
 echo "✔ Ingress Controller ready"
+echo "✔ Argo CD installed"
+echo "✔ Argo CD ready"
 echo
 echo "Next Steps"
 echo "----------"
