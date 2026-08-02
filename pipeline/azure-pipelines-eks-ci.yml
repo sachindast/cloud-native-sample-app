@@ -61,6 +61,22 @@ steps:
 
   - script: |
       set -x
+
+      echo "Configuring Git"
+
+      git config user.name "$(GITHUB_USERNAME)"
+      git config user.email "azuredevops@cloudnative.local"
+
+      echo "Checking Git Status"
+      git status
+      
+      git add helm/sample-node-app/values.yaml
+      git commit -m "ci: update image tag to $(IMAGE_TAG)" || echo "Nothing to commit"
+
+    displayName: "Commit Updated Helm values"
+
+  - script: |
+      set -x
       echo "Pushing Image To AWS ECR Registry"
 
       docker push $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
