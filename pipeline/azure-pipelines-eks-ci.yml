@@ -5,6 +5,7 @@ variables:
   ECR_REGISTRY: "723696375420.dkr.ecr.ap-south-1.amazonaws.com"
   ECR_REPOSITORY: "sample-node-app"
   IMAGE_TAG: "$(Build.BuildId)"
+  GITHUB_REPOSITORY: "cloud-native-sample-app"
   
 pool:
   name: Default
@@ -50,7 +51,14 @@ steps:
       set -x
       aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ECR_REGISTRY)
     displayName: "Login To Amazon ECR"
-  
+    
+  - script: |
+      set -x
+      echo "Pushing Image To AWS ECR Registry"
+
+      docker push $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
+    displayName: "Push Docker Image to AWS ECR"
+
   - script: |
       set -x
       echo "Updating Helm values.yaml"
@@ -60,6 +68,7 @@ steps:
     displayName: "Update Helm values.yaml"
 
   - script: |
+      set -e
       set -x
 
       echo "Configuring Git"
@@ -69,19 +78,21 @@ steps:
 
       echo "Checking Git Status"
       git status
-      
+
       git add helm/sample-node-app/values.yaml
+
       git commit -m "ci: update image tag to $(IMAGE_TAG)" || echo "Nothing to commit"
 
-    displayName: "Commit Updated Helm values"
+      echo "Updating Git Remote"
 
-  - script: |
-      set -x
-      echo "Pushing Image To AWS ECR Registry"
+      git remote set-url origin https://$(GITHUB_USERNAME):$(GITHUB_PAT)@github.com/$(GITHUB_USERNAME)/$(GITHUB_REPOSITORY).git
 
-      docker push $(ECR_REGISTRY)/$(ECR_REPOSITORY):$(IMAGE_TAG)
-    displayName: "Push Docker Image to AWS ECR"
+      echo "Pushing changes to GitHub"
 
+      git push origin HEAD:main
+
+    displayName: "Commit and Push Updated Helm values"
+    
   - script: |
       set -x
       docker images
