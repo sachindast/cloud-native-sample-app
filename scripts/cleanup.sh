@@ -71,6 +71,7 @@ confirm_cleanup() {
     echo "This operation will permanently destroy:"
     echo
     echo "✔ Sample Node Application"
+    echo "✔ Argo CD"
     echo "✔ NGINX Ingress Controller"
     echo "✔ Amazon EKS Cluster"
     echo "✔ Worker Nodes"
@@ -92,7 +93,7 @@ confirm_cleanup() {
 
 remove_application() {
 
-    print_step "[1/4] Removing Sample Node Application"
+    print_step "[1/5] Removing Sample Node Application"
 
     if helm status sample-node-app >/dev/null 2>&1; then
         helm uninstall sample-node-app
@@ -103,28 +104,51 @@ remove_application() {
 }
 
 ###############################################
-# Step 2 - Remove NGINX Ingress
+# Step 2 - Remove Argo CD
 ###############################################
 
-remove_ingress() {
+remove_argocd() {
 
-    print_step "[2/4] Removing NGINX Ingress Controller"
+    print_step "[2/5] Removing Argo CD"
 
-    if helm status ingress-nginx -n ingress-nginx >/dev/null 2>&1; then
-        helm uninstall ingress-nginx -n ingress-nginx
-        print_success "NGINX Ingress removed"
+    if helm status argocd -n argocd >/dev/null 2>&1; then
+        helm uninstall argocd -n argocd
+
+        kubectl delete namespace argocd --ignore-not-found
+
+        print_success "Argo CD removed"
     else
-        echo "NGINX Ingress not found. Skipping."
+        echo "Argo CD not found. Skipping."
     fi
 }
 
 ###############################################
-# Step 3 - Destroy Amazon EKS
+# Step 3 - Remove NGINX Ingress
+###############################################
+
+remove_ingress() {
+
+    print_step "[3/5] Removing NGINX Ingress Controller"
+
+    if helm status ingress-nginx -n ingress-nginx >/dev/null 2>&1; then
+
+        helm uninstall ingress-nginx -n ingress-nginx
+
+        kubectl delete namespace ingress-nginx --ignore-not-found
+
+        print_success "NGINX Ingress removed"
+
+    else
+        echo "NGINX Ingress not found. Skipping."
+    fi
+}
+###############################################
+# Step 4 - Destroy Amazon EKS
 ###############################################
 
 destroy_eks() {
 
-    print_step "[3/4] Destroying Amazon EKS Infrastructure"
+    print_step "[4/5] Destroying Amazon EKS Infrastructure"
 
     cd "$ROOT_DIR/terraform"
 
@@ -135,12 +159,12 @@ destroy_eks() {
 }
 
 ###############################################
-# Step 4 - Destroy Amazon ECR
+# Step 5 - Destroy Amazon ECR
 ###############################################
 
 destroy_ecr() {
 
-    print_step "[4/4] Destroying Amazon ECR"
+    print_step "[5/5] Destroying Amazon ECR"
 
     cd "$ROOT_DIR/terraform-ecr"
 
@@ -164,6 +188,8 @@ confirm_cleanup
 
 remove_application
 
+remove_argocd
+
 remove_ingress
 
 destroy_eks
@@ -178,6 +204,7 @@ echo
 echo "Resources Removed"
 echo "-----------------"
 echo "✔ Sample Node Application"
+echo "✔ Argo CD"
 echo "✔ NGINX Ingress Controller"
 echo "✔ Amazon EKS Infrastructure"
 echo "✔ Amazon ECR Repository"
