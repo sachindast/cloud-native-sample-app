@@ -29,6 +29,51 @@ def create_check(name, command):
     }
 
 
+def get_kubernetes_nodes():
+    """Return Kubernetes node health as structured data."""
+
+    node_ok, node_output = run_command(
+        ["kubectl", "get", "nodes"]
+    )
+
+    if not node_ok:
+        return {
+            "healthy": False,
+            "nodes": [],
+            "error": node_output
+        }
+
+    lines = node_output.splitlines()
+
+    nodes = []
+    all_nodes_ready = True
+
+    # Skip the header line
+    for line in lines[1:]:
+        parts = line.split()
+
+        if len(parts) < 2:
+            continue
+
+        node_name = parts[0]
+        node_status = parts[1]
+
+        nodes.append(
+            {
+                "name": node_name,
+                "status": node_status
+            }
+        )
+
+        if node_status != "Ready":
+            all_nodes_ready = False
+
+    return {
+        "healthy": all_nodes_ready,
+        "nodes": nodes
+    }
+
+
 def status():
     print("Checking Cloud-Native DevOps Platform...")
     print()
@@ -46,9 +91,7 @@ def status():
     )
 
     # Kubernetes Node Check
-    node_ok, node_output = run_command(
-        ["kubectl", "get", "nodes"]
-    )
+    node_result = get_kubernetes_nodes()
 
     # Argo CD Namespace Check
     argocd_check = create_check(
@@ -85,36 +128,25 @@ def status():
     print("Kubernetes Nodes")
     print("----------------")
 
-    all_nodes_ready = False
+    all_nodes_ready = node_result["healthy"]
 
-    if node_ok:
-        lines = node_output.splitlines()
-
-        all_nodes_ready = True
-
-        # Skip the header line
-        for line in lines[1:]:
-            parts = line.split()
-
-            node_name = parts[0]
-            node_status = parts[1]
-
-            if node_status == "Ready":
-                print(f"✔ {node_name}: Ready")
+    if node_result["nodes"]:
+        for node in node_result["nodes"]:
+            if node["status"] == "Ready":
+                print(f"✔ {node['name']}: Ready")
             else:
-                print(f"✖ {node_name}: {node_status}")
-                all_nodes_ready = False
-
-        print()
-
-        if all_nodes_ready:
-            print("✔ Overall Node Health: HEALTHY")
-        else:
-            print("✖ Overall Node Health: UNHEALTHY")
-
+                print(f"✖ {node['name']}: {node['status']}")
     else:
         print("✖ Unable to retrieve Kubernetes nodes")
-        print(f"  Reason: {node_output}")
+        if "error" in node_result:
+            print(f"  Reason: {node_result['error']}")
+
+    print()
+
+    if all_nodes_ready and node_result["nodes"]:
+        print("✔ Overall Node Health: HEALTHY")
+    else:
+        print("✖ Overall Node Health: UNHEALTHY")
 
     # Argo CD Pod Status
     print()
@@ -131,6 +163,9 @@ def status():
         # Skip the header line
         for line in lines[1:]:
             parts = line.split()
+
+            if len(parts) < 3:
+                continue
 
             pod_name = parts[0]
             ready_status = parts[1]
@@ -171,6 +206,9 @@ def status():
         # Skip the header line
         for line in lines[1:]:
             parts = line.split()
+
+            if len(parts) < 3:
+                continue
 
             app_name = parts[0]
             sync_status = parts[1]
