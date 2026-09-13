@@ -14,7 +14,10 @@ sys.path.append("/home/sachin/cloud-native-sample-app")
 # Import existing Platform Automation function
 # --------------------------------------------------
 
-from automation.platform.platform import get_kubernetes_nodes
+from automation.platform.platform import (
+    get_kubernetes_nodes,
+    get_kubernetes_pods
+)
 
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
@@ -40,6 +43,22 @@ tools = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_kubernetes_pods",
+            "description": (
+                "Returns the current Kubernetes pod health "
+                "including namespaces, pod names, ready status, "
+                "pod statuses and overall health."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 
@@ -51,7 +70,7 @@ tools = [
 messages = [
     {
         "role": "user",
-        "content": "Are my Kubernetes nodes healthy?"
+        "content": "Check both my Kubernetes nodes and pods and give me an overall platform health assessment?"
     }
 ]
 
@@ -101,6 +120,34 @@ if tool_calls:
             # --------------------------------------
 
             result = get_kubernetes_nodes()
+
+            print("\nTool result:")
+            print(json.dumps(result, indent=2))
+
+            # --------------------------------------
+            # Add assistant tool request
+            # --------------------------------------
+
+            messages.append(assistant_message)
+
+            # --------------------------------------
+            # Add tool result
+            # --------------------------------------
+
+            messages.append(
+                {
+                    "role": "tool",
+                    "content": json.dumps(result)
+                }
+            )
+
+        elif tool_name == "get_kubernetes_pods":
+
+            # --------------------------------------
+            # Execute REAL platform automation
+            # --------------------------------------
+
+            result = get_kubernetes_pods()
 
             print("\nTool result:")
             print(json.dumps(result, indent=2))
