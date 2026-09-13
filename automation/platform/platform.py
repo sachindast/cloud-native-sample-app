@@ -73,6 +73,54 @@ def get_kubernetes_nodes():
         "nodes": nodes
     }
 
+def get_kubernetes_pods():
+    """Return Kubernetes pod health as structured data."""
+
+    pod_ok, pod_output = run_command(
+        ["kubectl", "get", "pods", "-A"]
+    )
+
+    if not pod_ok:
+        return {
+            "healthy": False,
+            "pods": [],
+            "error": pod_output
+        }
+
+    lines = pod_output.splitlines()
+
+    pods = []
+    all_pods_healthy = True
+
+    # Skip the header line
+    for line in lines[1:]:
+        parts = line.split()
+
+        if len(parts) < 4:
+            continue
+
+        namespace = parts[0]
+        pod_name = parts[1]
+        ready_status = parts[2]
+        pod_status = parts[3]
+
+        pods.append(
+            {
+                "namespace": namespace,
+                "name": pod_name,
+                "ready": ready_status,
+                "status": pod_status
+            }
+        )
+
+        if pod_status != "Running":
+            all_pods_healthy = False
+
+    return {
+        "healthy": all_pods_healthy,
+        "pods": pods
+    }
+
 
 def status():
     print("Checking Cloud-Native DevOps Platform...")
@@ -148,6 +196,39 @@ def status():
     else:
         print("✖ Overall Node Health: UNHEALTHY")
 
+    # Kubernetes Pod Status
+    print()
+    print("Kubernetes Pods")
+    print("----------------")
+
+    pod_result = get_kubernetes_pods()
+
+    if pod_result["pods"]:
+        for pod in pod_result["pods"]:
+            if pod["status"] == "Running":
+                print(
+                    f"✔ {pod['namespace']}/"
+                    f"{pod['name']}: "
+                    f"{pod['ready']} {pod['status']}"
+                )
+            else:
+                print(
+                    f"✖ {pod['namespace']}/"
+                    f"{pod['name']}: "
+                    f"{pod['ready']} {pod['status']}"
+                )
+    else:
+        print("✖ Unable to retrieve Kubernetes pods")
+        if "error" in pod_result:
+            print(f"  Reason: {pod_result['error']}")
+
+    print()
+
+    if pod_result["healthy"] and pod_result["pods"]:
+        print("✔ Overall Pod Health: HEALTHY")
+    else:
+        print("✖ Overall Pod Health: UNHEALTHY")
+        
     # Argo CD Pod Status
     print()
     print("Argo CD Pods")
